@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const knex = require("knex");
 const app = require("../src/app");
-const { makeBookmarksArray} = require("./bookmarks.fixtures");
+const { makeBookmarksArray, maliciousBookmarks } = require("./bookmarks.fixtures");
 const supertest = require("supertest");
 
 describe.only("Bookmarks Endpoints", function () {
@@ -75,84 +75,57 @@ describe.only("Bookmarks Endpoints", function () {
     });
   });
 
-  describe.only(`POST /bookmarks`, () => {
-    it(`creates an bookmark, responding with 201 and the new bookmark`, function() {
+  describe(`POST /bookmarks`, () => {
+    it(`creates an bookmark, responding with 201 and the new bookmark`, function () {
       const newBookmark = {
         title: "Bookmark Title",
         url: "http://example.com",
         description: "Some new description",
-        rating: 3
-      }
+        rating: 3,
+      };
 
       return supertest(app)
-      .post("/bookmarks")
-      .set("Authorization", "Bearer " + process.env.API_TOKEN)
-      .send(newBookmark)
-      .expect(201)
-      .expect(res => {
-        expect(res.body.title).to.eql(newBookmark.title)
-        expect(res.body.url).to.eql(newBookmark.url)
-        expect(res.body.description).to.eql(newBookmark.description)
-        expect(res.body.rating).to.eql(newBookmark.rating)
-        expect(res.headers.location).to.eql(`/bookmarks/${res.body.id}`)
-        expect(res.body).to.have.property("id")
-      })
-      .then(postRes => 
-        supertest(app)
-        .get(`/bookmarks/${postRes.body.id}`)
+        .post("/bookmarks")
         .set("Authorization", "Bearer " + process.env.API_TOKEN)
-        .expect(postRes.body)
-        )
-    })
+        .send(newBookmark)
+        .expect(201)
+        .expect((res) => {
+          expect(res.body.title).to.eql(newBookmark.title);
+          expect(res.body.url).to.eql(newBookmark.url);
+          expect(res.body.description).to.eql(newBookmark.description);
+          expect(res.body.rating).to.eql(newBookmark.rating);
+          expect(res.headers.location).to.eql(`/bookmarks/${res.body.id}`);
+          expect(res.body).to.have.property("id");
+        })
+        .then((postRes) =>
+          supertest(app)
+            .get(`/bookmarks/${postRes.body.id}`)
+            .set("Authorization", "Bearer " + process.env.API_TOKEN)
+            .expect(200, postRes.body)
+        );
+    });
 
-    it('removes XSS attack content from returned bookmarks', () => {
-      // const {maliciousBookmark, expectedBookmark} = maliciousBookmarkItems;
-      const maliciousBookmark = {
-        id: 911,
-        title: 'Naughty naughty very naughty <script>alert("xss");</script>',
-        url: 'http://example.com',
-        description: `Bad image <img src="https://url.to.file.which/does-not.exist" onerror="alert(document.cookie);">. But not <strong>all</strong> bad.`
-      }
-      
-      const expectedBookmark = {
-        id: 911,
-        title: 'Naughty naughty very naughty &lt;script&gt;alert(\"xss\");&lt;/script&gt;',
-        url: 'http://example.com',
-        description: `Bad image <img src="https://url.to.file.which/does-not.exist">. But not <strong>all</strong> bad.`
-      }
- 
-      
-      // console.log("-------------");
-      // console.log(maliciousBookmark);
-      // console.log(expectedBookmark);
-      // console.log("-------------");
+    it("removes XSS attack content from returned bookmarks", () => {
+      const {maliciousBookmark, expectedBookmark} = maliciousBookmarks();
 
       return supertest(app)
-      .post("/bookmarks")
-      .set("Authorization", "Bearer " + process.env.API_TOKEN)
-      .send(maliciousBookmark)
-      .expect(201)
-      .expect((res) => {
-        console.log("-------------");
-        console.log(res.body)
-        console.log("-------------");
-
-        expect(res.body.title).to.eql('Naughty naughty very naughty &lt;script&gt;alert(\"xss\");&lt;/script&gt;')
-        expect(res.body.description).to.eql(`Bad image <img src="https://url.to.file.which/does-not.exist">. But not <strong>all</strong> bad.`)
-
-        // expect(res.body.title).to.eql('Naughty naughty very naughty &lt;script&gt;alert(\"xss\");&lt;/script&gt;')
-        expect(res.body.url).to.eql(expectedBookmark.url)
-        // expect(res.body.description).to.eql(`Bad image <img src="https://url.to.file.which/does-not.exist">. But not <strong>all</strong> bad.`)
-        expect(res.headers.location).to.eql(`/bookmarks/${res.body.id}`)
-        expect(res.body).to.have.property("id")
-      })
-      .then(postRes => 
-        supertest(app)
-        .get(`/bookmarks/${postRes.body.id}`)
+        .post("/bookmarks")
         .set("Authorization", "Bearer " + process.env.API_TOKEN)
-        .expect(postRes.body)
-        )
-
-    })
-  })
+        .send(maliciousBookmark)
+        .expect(201)
+        .expect(res => {
+          expect(res.body.title).to.eql(expectedBookmark.title);
+          expect(res.body.url).to.eql(expectedBookmark.url);
+          expect(res.body.description).to.eql(expectedBookmark.description);
+          expect(res.headers.location).to.eql(`/bookmarks/${res.body.id}`);
+          expect(res.body).to.have.property("id");
+        })
+        .then((postRes) => 
+          supertest(app)
+            .get(`/bookmarks/${postRes.body.id}`)
+            .set("Authorization", "Bearer " + process.env.API_TOKEN)
+            .expect(200, postRes.body)
+          );
+    });
+  });
 });
