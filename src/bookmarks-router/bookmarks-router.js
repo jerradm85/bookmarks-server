@@ -12,13 +12,18 @@ bookmarksRouter
   .get((req, res, next) => {
     const knexInstance = req.app.get("db");
     BookmarksService.getAllBookmarks(knexInstance)
-      .then((bookmark) => {
-        res.json({
-          ...bookmark,
-          title: xss(bookmark.title),
-          url: xss(bookmark.url),
-          description: xss(bookmark.description)
-        });
+      .then(bookmarks => {
+        // map over the returned bookmarks and sanitize each
+        const sanitize = bookmarks.map(bookmark => {
+          return {
+            ...bookmark,
+            title: xss(bookmark.title), // sanitize title
+            url: xss(bookmark.url), // sanitize content
+            description: xss(bookmark.description), // sanitize content
+          }
+        })
+        // pass array of sanitized bookmarks to the response
+        res.json(sanitize)
       })
       .catch(next);
   })
