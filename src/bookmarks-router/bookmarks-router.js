@@ -1,10 +1,11 @@
 const express = require("express");
 const logger = require("../logger");
 const { v4: uuid } = require("uuid");
-const bookmarks = require("../store");
+// const bookmarks = require("../store");
 const bookmarksRouter = express.Router();
 const bodyParser = express.json();
 const BookmarksService = require("../bookmarks-service");
+const xss = require("xss");
 
 bookmarksRouter
   .route("/")
@@ -16,8 +17,8 @@ bookmarksRouter
       })
       .catch(next);
   })
-  .post(bodyParser, (req, res) => {
-    const { title, url } = req.body;
+  .post(bodyParser, (req, res, next) => {
+    const { title, url, description, rating} = req.body;
     if (!title) {
       logger.error("Title is required.");
       return res.status(400).send("Invalid Title");
@@ -26,18 +27,31 @@ bookmarksRouter
       logger.error("URL is required.");
       return res.status(400).send("Invalid URL");
     }
-    const id = uuid();
-    const bookmark = {
-      id,
-      title,
-      url,
-    };
-    bookmarks.push(bookmark);
-    logger.info(`Bookmark with id:${id} created`);
-    res
-      .status(201)
-      .location(`http://localhost:8000/bookmarks/${id}`)
-      .json(bookmark);
+    const knexInstance = req.app.get("db");
+    const newBookmark = { title, url, description, rating };
+    BookmarksService.insertBookmark(knexInstance, newBookmark)
+      .then((bookmark) => {
+        logger.info(`Bookmark with id:${bookmark.id} created`);
+        console.log("========")
+        console.log({
+          ...bookmark,
+          title: xss(bookmark.title),
+          url: xss(bookmark.url),
+          description: xss(bookmark.description)
+        });
+        console.log("========")
+        res
+          .status(201)
+          .location(`/bookmarks/${bookmark.id}`)
+          .json({
+            ...bookmark,
+            title: xss(bookmark.title),
+            url: xss(bookmark.url),
+            description: xss(bookmark.description)
+          });
+        
+      })
+      .catch(next);
   });
 
 bookmarksRouter
@@ -45,13 +59,12 @@ bookmarksRouter
   .get((req, res, next) => {
     const knexInstance = req.app.get("db");
     BookmarksService.getById(knexInstance, req.params.id)
-      .then(bookmark => {
+      .then((bookmark) => {
         if (!bookmark) {
           logger.error(`Bookmark with id:${req.params.id} not found.`);
           return res.status(404).json({
             error: { message: `Bookmark doesn't exist` },
           });
-
         }
         res.json(bookmark);
       })
