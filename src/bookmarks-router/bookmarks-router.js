@@ -13,7 +13,12 @@ bookmarksRouter
     const knexInstance = req.app.get("db");
     BookmarksService.getAllBookmarks(knexInstance)
       .then((bookmark) => {
-        res.json(bookmark);
+        res.json({
+          ...bookmark,
+          title: xss(bookmark.title),
+          url: xss(bookmark.url),
+          description: xss(bookmark.description)
+        });
       })
       .catch(next);
   })
@@ -32,14 +37,6 @@ bookmarksRouter
     BookmarksService.insertBookmark(knexInstance, newBookmark)
       .then((bookmark) => {
         logger.info(`Bookmark with id:${bookmark.id} created`);
-        console.log("========")
-        console.log({
-          ...bookmark,
-          title: xss(bookmark.title),
-          url: xss(bookmark.url),
-          description: xss(bookmark.description)
-        });
-        console.log("========")
         res
           .status(201)
           .location(`/bookmarks/${bookmark.id}`)
@@ -66,7 +63,12 @@ bookmarksRouter
             error: { message: `Bookmark doesn't exist` },
           });
         }
-        res.json(bookmark);
+        res.json({
+          ...bookmark,
+          title: xss(bookmark.title),
+          url: xss(bookmark.url),
+          description: xss(bookmark.description)
+        });
       })
       .catch(next);
   })
