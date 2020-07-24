@@ -4,7 +4,7 @@ const morgan = require("morgan");
 const cors = require("cors");
 const helmet = require("helmet");
 const { NODE_ENV } = require("./config");
-const validBearerToken = require("./validBearerToken");
+// const validBearerToken = require("./validBearerToken");
 const { error404, errorHandler } = require("./error");
 const bookmarksRouter = require("./bookmarks-router/bookmarks-router");
 
@@ -17,9 +17,9 @@ const morganOption = (NODE_ENV === 'production')
 app.use(morgan(morganOption));
 app.use(helmet());
 app.use(cors());
-app.use(validBearerToken);
+// app.use(validBearerToken);
 
-app.use("/bookmarks", bookmarksRouter);
+app.use("/api/bookmarks", bookmarksRouter);
 
 app.get("/", (req, res) => {
   res.send("Hello, world!");
