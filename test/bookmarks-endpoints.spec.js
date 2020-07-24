@@ -202,7 +202,7 @@ describe.only("Bookmarks Endpoints", function () {
           })
           .expect(204)
           .then(res => {
-            supertest(app)
+            return supertest(app)
               .get(`/api/bookmarks/${idToUpdate}`)
               .expect(expectedBookmark)
           })
