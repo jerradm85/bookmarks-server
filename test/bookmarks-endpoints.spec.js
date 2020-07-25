@@ -1,10 +1,13 @@
 const { expect } = require("chai");
 const knex = require("knex");
 const app = require("../src/app");
-const { makeBookmarksArray, maliciousBookmarks } = require("./bookmarks.fixtures");
+const { 
+  makeBookmarksArray, 
+  maliciousBookmarks
+} = require("./bookmarks.fixtures");
 const supertest = require("supertest");
 
-describe.only("Bookmarks Endpoints", function () {
+describe("Bookmarks Endpoints", function () {
   let db;
 
   before("make knex instance", () => {
@@ -62,6 +65,16 @@ describe.only("Bookmarks Endpoints", function () {
       const testBookmarks = makeBookmarksArray();
       beforeEach("insert bookmarks into database", () => {
         return db.into("bookmarks").insert(testBookmarks);
+      });
+
+      it(`responds with 404 if no bookmark found`, () => {
+        const testId = 1000;
+
+        return supertest(app)
+          .get(`/api/bookmarks/${testId}`)
+          .set("Authorization", "Bearer " + process.env.API_TOKEN)
+          .expect(404, {error: { message: `bookmark doesn't exist` }})
+
       });
 
       it("responds 200 with specified bookmark", () => {
@@ -129,7 +142,7 @@ describe.only("Bookmarks Endpoints", function () {
     });
   });
 
-  describe.only(`PATCH /api/bookmarks/:id`, () => {
+  describe(`PATCH /api/bookmarks/:id`, () => {
     context(`given no bookmarks data`, () => {
       it(`responds with 404 not found`, () => {
         const bookmarkId = 1000;
@@ -145,13 +158,6 @@ describe.only("Bookmarks Endpoints", function () {
         return db.into("bookmarks")
           .insert(testBookmarks)
       })
-      // it(`responds with 400 if id not provided in url`, () => {
-
-      //   return supertest(app)
-      //     .patch(`/api/bookmarks/`)
-      //     .send({})
-      //     .expect(404, {error: { message: `bookmark doesn't exist` }})
-      // })
       it(`responds 204 and updates the bookmark`, () => {
         const idToUpdate = 3
         const updateBookmark = {
